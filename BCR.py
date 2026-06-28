@@ -3,10 +3,11 @@ from bs4 import BeautifulSoup
 from urllib.parse import unquote
 import time
 import threading
+import os
 from flask import Flask, jsonify
 
 # ======================
-# Cấu hình
+# Cấu hình tài khoản game
 # ======================
 BASE = "https://aibcr.me"
 LOGIN_URL = f"{BASE}/login"
@@ -17,7 +18,7 @@ USERNAME = "Hoang2285"
 PASSWORD = "hoang2010"
 
 # ======================
-# Biến toàn cục
+# Biến khởi tạo toàn cục
 # ======================
 session = requests.Session()
 session.headers.update({
@@ -26,12 +27,12 @@ session.headers.update({
     "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7"
 })
 
-last_results = {}      # cache để phát hiện thay đổi
-filtered_data = []     # danh sách đầy đủ các bàn
+last_results = {}      # Lưu lịch sử để phát hiện phiên mới
+filtered_data = []     # Danh sách chứa kết quả các bàn dữ liệu
 auto_running = True
 
 # ======================
-# Hàm phụ
+# Các hàm chức năng hệ thống
 # ======================
 def get_csrf_token(html):
     soup = BeautifulSoup(html, "html.parser")
@@ -44,17 +45,23 @@ def get_csrf_token(html):
     return None
 
 def login():
-    r = session.get(LOGIN_URL, timeout=15)
-    token = get_csrf_token(r.text)
-    payload = {"username": USERNAME, "password": PASSWORD, "action": "Login"}
-    if token:
-        payload["_token"] = token
-    headers = {"Referer": LOGIN_URL, "Origin": BASE, "Content-Type": "application/x-www-form-urlencoded"}
-    resp = session.post(LOGIN_URL, data=payload, headers=headers, timeout=15)
-    print("✅ Đăng nhập:", resp.status_code)
+    try:
+        r = session.get(LOGIN_URL, timeout=15)
+        token = get_csrf_token(r.text)
+        payload = {"username": USERNAME, "password": PASSWORD, "action": "Login"}
+        if token:
+            payload["_token"] = token
+        headers = {"Referer": LOGIN_URL, "Origin": BASE, "Content-Type": "application/x-www-form-urlencoded"}
+        resp = session.post(LOGIN_URL, data=payload, headers=headers, timeout=15)
+        print("✅ Đăng nhập hệ thống gốc:", resp.status_code)
+    except Exception as e:
+        print("❌ Lỗi trong quá trình Đăng nhập:", e)
 
 def go_to_lobby():
-    session.get(LOBBY_URL, timeout=15)
+    try:
+        session.get(LOBBY_URL, timeout=15)
+    except Exception as e:
+        print("❌ Lỗi khi thiết lập vào sảnh Lobby:", e)
 
 def call_getnewresult():
     global filtered_data
@@ -70,7 +77,7 @@ def call_getnewresult():
     try:
         resp = session.post(GETNEWRESULT_URL, headers=headers, data={"gameCode": "ae"}, timeout=15)
         if not resp.ok:
-            print(f"⚠️ getnewresult lỗi: {resp.status_code}")
+            print(f"⚠️ API sảnh lỗi phản hồi: {resp.status_code}")
             return
 
         data = resp.json().get("data", [])
@@ -81,7 +88,7 @@ def call_getnewresult():
             curr = t.get("result", "")
             prev = last_results.get(tb_name, "")
 
-            # Nếu kết quả mới khác cache thì cập nhật
+            # Kiểm tra phát hiện sự thay đổi kết quả (Có phiên mới xuất hiện)
             if curr and curr != prev:
                 last_results[tb_name] = curr
                 new_filtered.append({
@@ -94,42 +101,52 @@ def call_getnewresult():
                 })
 
         if new_filtered:
-            # Cập nhật vào danh sách chính
             fd_dict = {item["table_name"]: item for item in filtered_data}
             for f in new_filtered:
                 fd_dict[f["table_name"]] = f
-                print(f"✅ {f['table_name']} đổi: {f['result']}")
+                print(f"✅ Bàn [{f['table_name']}] cập nhật kết quả mới: {f['result']}")
             filtered_data = list(fd_dict.values())
 
     except Exception as e:
-        print("❌ Lỗi call_getnewresult:", e)
+        print("❌ Lỗi đồng bộ dữ liệu call_getnewresult:", e)
 
-# ======================
-# Tự động treo
-# ======================
+# Vòng lặp lấy dữ liệu ngầm tự động
 def auto_loop():
     while auto_running:
         call_getnewresult()
-        time.sleep(1)
+        time.sleep(3) # Cài đặt 3 giây quét 1 lần để tránh bị chặn IP (Rate limit)
 
 # ======================
-# API duy nhất
+# CẤU HÌNH ROUTE API FLASK
 # ======================
 app = Flask(__name__)
 
+# Route trang chủ: Khắc phục triệt để lỗi "Not Found" (404) khi vào link Render chính
+@app.route("/")
+def home():
+    return jsonify({
+        "status": "Hệ thống API đang chạy ngầm ổn định",
+        "total_active_tables": len(filtered_data),
+        "endpoint_lay_data": "/data",
+        "author": "@tranhoang2286"
+    })
+
+# Route trả về dữ liệu JSON dạng danh sách cho Tool đọc
 @app.route("/data")
 def get_data():
-    # Sắp xếp theo tên bàn (nếu muốn)
     sorted_data = sorted(filtered_data, key=lambda x: x["table_name"])
     return jsonify(sorted_data)
 
 # ======================
-# Khởi động
+# Khởi chạy ứng dụng
 # ======================
 if __name__ == "__main__":
     login()
     go_to_lobby()
-    threading.Thread(target=auto_loop, daemon=True).start()
-    print("🚀 API chạy tại: http://127.0.0.1:5000/data")
-    app.run(host="0.0.0.0", port=5000)
     
+    # Kích hoạt luồng chạy ngầm cào dữ liệu liên tục
+    threading.Thread(target=auto_loop, daemon=True).start()
+    
+    # Cấu hình lấy PORT tự động từ máy chủ Render để không bị lỗi treo sập Deploy
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
