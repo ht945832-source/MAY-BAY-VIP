@@ -1,11 +1,11 @@
 {
-  "name": "maybay-tracker",
+  "name": "aviator-b52-tracker",
   "version": "1.0.0",
-  "description": "Tool theo dõi dữ liệu game Aviator",
-  "main": "maybay.js",
+  "description": "Tool theo dõi dữ liệu game Aviator từ B52",
+  "main": "aviator.js",
   "scripts": {
-    "start": "node maybay.js",
-    "dev": "nodemon maybay.js"
+    "start": "node aviator.js",
+    "dev": "nodemon aviator.js"
   },
   "dependencies": {
     "axios": "^1.7.9",
