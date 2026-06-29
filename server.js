@@ -1,4 +1,5 @@
 const fs = require('fs');
+const fs = require('fs');
 const path = require('path');
 const WebSocket = require('ws');
 const express = require('express');
@@ -8,6 +9,7 @@ const app = express();
 app.use(cors());
 const PORT = process.env.PORT || 1234;
 
+// Biến lưu kết quả toàn cục
 let currentResult = {
     "phien": null,
     "xuc_xac_1": null,
@@ -20,7 +22,7 @@ let currentResult = {
 
 let currentSessionId = null;
 let wsConnection = null;
-const RECONNECT_DELAY = 2500;
+const RECONNECT_DELAY = 3000;
 
 function getVietnamTime() {
     const now = new Date();
@@ -28,27 +30,27 @@ function getVietnamTime() {
     return utc7.toISOString().replace('T', ' ').substring(0, 19) + " UTC+7";
 }
 
-// Hàm giải mã token.txt thông minh theo cấu trúc gói tin nhị phân của ông
+// Hàm giải mã token.txt thông minh
 function loadTokenFromFile() {
     try {
         const filePath = path.join(__dirname, 'token.txt');
         if (!fs.existsSync(filePath)) {
-            console.log("[❌] Không tìm thấy file token.txt!");
+            console.log("[❌] KHÔNG TÌM THẤY FILE token.txt TRÊN SERVER RENDER!");
             return null;
         }
 
         const content = fs.readFileSync(filePath, 'utf8');
-        
-        // Quét tìm trực tiếp khối JSON chứa ipAddress và wsToken
         const jsonMatch = content.match(/\{[^{}]*"ipAddress"[^{}]*\}/);
+        
         if (jsonMatch) {
             const parsedData = JSON.parse(jsonMatch[0]);
-            console.log(`[✅] Đã đồng bộ Token thành công của User: ${parsedData.username || 'Hệ thống'}`);
+            console.log(`[✅] ĐÃ ĐỌC FILE TOKEN.TXT - ĐỒNG BỘ USER: ${parsedData.username || 'Hệ thống'}`);
             return parsedData;
         }
+        console.log("[⚠️] Nội dung token.txt không khớp cấu trúc JSON chuẩn.");
         return null;
     } catch (error) {
-        console.log(`[❌] Lỗi xử lý đọc file token.txt: ${error.message}`);
+        console.log(`[❌] Lỗi đọc file token.txt: ${error.message}`);
         return null;
     }
 }
@@ -65,10 +67,13 @@ if (TOKEN_DATA) {
     ACTIVE_USER = TOKEN_DATA.username || "GM_quapotjz";
     EXPIRE_TIME = TOKEN_DATA.timestamp || 1780029354479;
     REFRESH_TOKEN = TOKEN_DATA.refreshToken || "";
+} else {
+    // Token dự phòng
+    WS_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhbW91bnQiOjAsInVzZXJuYW1lIjoiU0NfYXBpc3Vud2luMTIzIn0.hgrRbSV6vnBwJMg9ZFtbx3rRu9mX_hZMZ_m5gMNhkw0";
 }
 
-// Endpoint động (Hỗ trợ cả /websocket hoặc /wsbinary tùy thuộc thiết bị của ông)
-const WEBSOCKET_URL = `wss://websocket.azhkthg1.net/websocket?token=${WS_TOKEN}`;
+// ĐỔI ĐUÔI THÀNH /wsbinary THEO ĐÚNG CƠ CHẾ APP DI ĐỘNG CỦA ÔNG
+const WEBSOCKET_URL = `wss://websocket.azhkthg1.net/wsbinary?token=${WS_TOKEN}`;
 
 const WS_HEADERS = {
     "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_11 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6.1 Mobile/15E148 Safari/604.1",
@@ -96,7 +101,7 @@ const initialMessages = [
 ];
 
 function connectWebsocket() {
-    console.log("[🔄] Đang mở kết nối WebSocket...");
+    console.log(`[🔄] ĐANG GỌI KẾT NỐI ĐẾN: ${WEBSOCKET_URL}`);
 
     wsConnection = new WebSocket(WEBSOCKET_URL, {
         headers: WS_HEADERS,
@@ -104,12 +109,13 @@ function connectWebsocket() {
     });
 
     wsConnection.on('open', () => {
-        console.log("[✅] WebSocket Connected!");
+        console.log("[🚀] KẾT NỐI WEBSOCKET THÀNH CÔNG! ĐANG GỬI THÔNG TIN BẮT TAY...");
         
         initialMessages.forEach((msg, index) => {
             setTimeout(() => {
                 if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
                     wsConnection.send(JSON.stringify(msg));
+                    console.log(`[➡️] Đã gửi gói tin bắt tay bước ${index + 1}`);
                 }
             }, index * 600);
         });
@@ -125,7 +131,7 @@ function connectWebsocket() {
 
                 if (cmd === 1008 && sid) {
                     currentSessionId = sid;
-                    console.log(`[🎮] Mã phiên mới: ${sid}`);
+                    console.log(`[🎮] PHIÊN MỚI XUẤT HIỆN: ${sid}`);
                 }
 
                 if (cmd === 1003 && gBB) {
@@ -144,37 +150,40 @@ function connectWebsocket() {
                         "thoi_gian": getVietnamTime()
                     };
 
-                    console.log(`[🎲] Kết quả phiên ${currentResult.phien}: ${total} (${result})`);
+                    console.log(`[🎲] KẾT QUẢ PHIÊN ${currentResult.phien}: ${d1}-${d2}-${d3} = ${total} (${result})`);
                     currentSessionId = null;
                 }
             }
         } catch (e) {}
     });
 
-    wsConnection.on('close', (code) => {
-        console.log(`[❌] Socket đóng (Code: ${code}). Đang kết nối lại...`);
+    wsConnection.on('close', (code, reason) => {
+        console.log(`[❌] NGẮT KẾT NỐI (Code: ${code}, Lý do: ${reason || 'Không rõ'}). Thử lại sau ${RECONNECT_DELAY/1000}s...`);
         setTimeout(connectWebsocket, RECONNECT_DELAY);
     });
 
     wsConnection.on('error', (err) => {
-        console.log(`[❌] Lỗi kết nối socket: ${err.message}`);
+        console.log(`[❌] LỖI SOCKET: ${err.message}`);
     });
 }
 
+// Khởi chạy WebSocket trước để tránh nghẽn luồng HTTP Express
+connectWebsocket();
+
+// Cấu hình Express Endpoint
 app.get('/api/tx', (req, res) => {
     res.json(currentResult);
 });
 
 app.get('/', (req, res) => {
     res.json({
-        "name": "SunWin Streamer Node V2",
+        "name": "SunWin Streamer Node V3",
         "status": "Running",
-        "user": ACTIVE_USER,
+        "user_sync": ACTIVE_USER,
         "time": getVietnamTime()
     });
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`📡 Cổng API đang mở tại /api/tx thông qua Port: ${PORT}`);
-    connectWebsocket();
+    console.log(`📡 API Live tại cổng: http://localhost:${PORT}/api/tx`);
 });
