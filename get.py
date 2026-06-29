@@ -1,4 +1,4 @@
-﻿# server.py
+# server.py
 import asyncio
 import websockets
 import json
@@ -47,7 +47,6 @@ def parse_token_data(token_text):
         info_match = re.search(r'"info"\x07([^"]+?)"?', token_text)
         if info_match:
             info_str = info_match.group(1)
-            # Làm sạch chuỗi JSON
             info_str = info_str.replace('\x04', '').replace('\x07', '').replace('\x05', '').replace('\x06', '')
             info_data = json.loads(info_str)
             return info_data
@@ -90,93 +89,56 @@ def load_token():
 # Load token data
 TOKEN_DATA = load_token()
 
-if TOKEN_DATA:
-    WEBSOCKET_URL = f"wss://websocket.azhkthg1.net/websocket?token={TOKEN_DATA.get('wsToken', '')}"
-    WS_HEADERS = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-        "Origin": "https://play.sun.pw"
-    }
-    
-    # Initial messages
-    initial_messages = [
-        [
-            1,
-            "MiniGame",
-            TOKEN_DATA.get('username', 'GM_quapotjz'),
-            "quapit",
-            {
-                "signature": "05915B436159B8F4E4DFF537639BD014D54EBEFA18CF62A8EB205B4074010AD72AEA9A780D5A8A4E1BD59BBBAFE03902C594B5DA56FD60D099F1FDDCCD48385FCC2760B5B0B4B8E75D39B8E40DF8CB7C01EA58DBEDA32805927473AB71FA9B798B0C2EDC445C3E36E47EF0AAFAD45601D99AAD1EC642FD2B63573A0401D6EC69",
-                "expireIn": TOKEN_DATA.get('timestamp', 1774138177205),
-                "wsToken": TOKEN_DATA.get('wsToken', ''),
-                "accessToken": "7e9a9ecbff1b4a6393b48346f6d8b709",
-                "message": "Thành công",
-                "refreshToken": TOKEN_DATA.get('refreshToken', ''),
-                "info": TOKEN_DATA
-            }
-        ],
-        [6, "MiniGame", "taixiuPlugin", {"cmd": 1005}],
-        [6, "MiniGame", "lobbyPlugin", {"cmd": 10001}]
-    ]
-else:
-    print("[❌] Không thể load token, sử dụng token mặc định (có thể không hoạt động)")
-    WEBSOCKET_URL = "wss://websocket.azhkthg1.net/websocket?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJnZW5kZXIiOjAsImNhblZpZXdTdGF0IjpmYWxzZSwiZGlzcGxheU5hbWUiOiJsb2xtYW1heXN1MTIiLCJib3QiOjAsImlzTWVyY2hhbnQiOmZhbHNlLCJ2ZXJpZmllZEJhbmtBY2NvdW50IjpmYWxzZSwicGxheUV2ZW50TG9iYnkiOmZhbHNlLCJjdXN0b21lcklkIjozMzkxMDEyNTEsImFmZklkIjoiR0VNV0lOIiwiYmFubmVkIjpmYWxzZSwiYnJhbmQiOiJnZW0iLCJlbWFpbCI6IiIsInRpbWVzdGFtcCI6MTc3NDEzODE3NzIwNCwibG9ja0dhbWVzIjpbXSwiYW1vdW50IjowLCJsb2NrQ2hhdCI6ZmFsc2UsInBob25lVmVyaWZpZWQiOmZhbHNlLCJpcEFkZHJlc3MiOiIyNDA1OjQ4MDI6NGU0Mjo0MTcwOjcxMDQ6YjY0Njo2Nzg5Ojg2NDgiLCJtdXRlIjpmYWxzZSwiYXZhdGFyIjoiaHR0cHM6Ly9pbWFnZXMuc3dpbnNob3AubmV0L2ltYWdlcy9hdmF0YXIvYXZhdGFyXzA5LnBuZyIsInBsYXRmb3JtSWQiOjQsInVzZXJJZCI6ImEyOGEwZjA2LWU4OGYtNDRiNy1hMjY4LTVmNmRhZDk0OWZiZiIsImVtYWlsVmVyaWZpZWQiOm51bGwsInJlZ1RpbWUiOjE3NzMxMDY2NDkxOTksInBob25lIjoiIiwiZGVwb3NpdCI6ZmFsc2UsInVzZXJuYW1lIjoiR01fcXVhcG90anoifQ.3ycgvK1-PwRpBqANZJ3li00kpuzV6Ike6ZjYPthf3X0"
-    WS_HEADERS = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-        "Origin": "https://play.sun.pw"
-    }
-    initial_messages = [
-        [
-            1,
-            "MiniGame",
-            "GM_quapotjz",
-            "quapit",
-            {
-                "signature": "05915B436159B8F4E4DFF537639BD014D54EBEFA18CF62A8EB205B4074010AD72AEA9A780D5A8A4E1BD59BBBAFE03902C594B5DA56FD60D099F1FDDCCD48385FCC2760B5B0B4B8E75D39B8E40DF8CB7C01EA58DBEDA32805927473AB71FA9B798B0C2EDC445C3E36E47EF0AAFAD45601D99AAD1EC642FD2B63573A0401D6EC69",
-                "expireIn": 1774138177205,
-                "wsToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJnZW5kZXIiOjAsImNhblZpZXdTdGF0IjpmYWxzZSwiZGlzcGxheU5hbWUiOiJsb2xtYW1heXN1MTIiLCJib3QiOjAsImlzTWVyY2hhbnQiOmZhbHNlLCJ2ZXJpZmllZEJhbmtBY2NvdW50IjpmYWxzZSwicGxheUV2ZW50TG9iYnkiOmZhbHNlLCJjdXN0b21lcklkIjozMzkxMDEyNTEsImFmZklkIjoiR0VNV0lOIiwiYmFubmVkIjpmYWxzZSwiYnJhbmQiOiJnZW0iLCJlbWFpbCI6IiIsInRpbWVzdGFtcCI6MTc3NDEzODE3NzIwNCwibG9ja0dhbWVzIjpbXSwiYW1vdW50IjowLCJsb2NrQ2hhdCI6ZmFsc2UsInBob25lVmVyaWZpZWQiOmZhbHNlLCJpcEFkZHJlc3MiOiIyNDA1OjQ4MDI6NGU0Mjo0MTcwOjcxMDQ6YjY0Njo2Nzg5Ojg2NDgiLCJtdXRlIjpmYWxzZSwiYXZhdGFyIjoiaHR0cHM6Ly9pbWFnZXMuc3dpbnNob3AubmV0L2ltYWdlcy9hdmF0YXIvYXZhdGFyXzA5LnBuZyIsInBsYXRmb3JtSWQiOjQsInVzZXJJZCI6ImEyOGEwZjA2LWU4OGYtNDRiNy1hMjY4LTVmNmRhZDk0OWZiZiIsImVtYWlsVmVyaWZpZWQiOm51bGwsInJlZ1RpbWUiOjE3NzMxMDY2NDkxOTksInBob25lIjoiIiwiZGVwb3NpdCI6ZmFsc2UsInVzZXJuYW1lIjoiR01fcXVhcG90anoifQ.3ycgvK1-PwRpBqANZJ3li00kpuzV6Ike6ZjYPthf3X0",
-                "accessToken": "7e9a9ecbff1b4a6393b48346f6d8b709",
-                "message": "Thành công",
-                "refreshToken": "950f5b9974dd4f4c982a3681af9acbc7.f0d252e72ee64f07bd5819d6ca54bba1",
-                "info": {
-                    "ipAddress": "2405:4802:4e42:4170:7104:b646:6789:8648",
-                    "wsToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJnZW5kZXIiOjAsImNhblZpZXdTdGF0IjpmYWxzZSwiZGlzcGxheU5hbWUiOiJsb2xtYW1heXN1MTIiLCJib3QiOjAsImlzTWVyY2hhbnQiOmZhbHNlLCJ2ZXJpZmllZEJhbmtBY2NvdW50IjpmYWxzZSwicGxheUV2ZW50TG9iYnkiOmZhbHNlLCJjdXN0b21lcklkIjozMzkxMDEyNTEsImFmZklkIjoiR0VNV0lOIiwiYmFubmVkIjpmYWxzZSwiYnJhbmQiOiJnZW0iLCJlbWFpbCI6IiIsInRpbWVzdGFtcCI6MTc3NDEzODE3NzIwNCwibG9ja0dhbWVzIjpbXSwiYW1vdW50IjowLCJsb2NrQ2hhdCI6ZmFsc2UsInBob25lVmVyaWZpZWQiOmZhbHNlLCJpcEFkZHJlc3MiOiIyNDA1OjQ4MDI6NGU0Mjo0MTcwOjcxMDQ6YjY0Njo2Nzg5Ojg2NDgiLCJtdXRlIjpmYWxzZSwiYXZhdGFyIjoiaHR0cHM6Ly9pbWFnZXMuc3dpbnNob3AubmV0L2ltYWdlcy9hdmF0YXIvYXZhdGFyXzA5LnBuZyIsInBsYXRmb3JtSWQiOjQsInVzZXJJZCI6ImEyOGEwZjA2LWU4OGYtNDRiNy1hMjY4LTVmNmRhZDk0OWZiZiIsImVtYWlsVmVyaWZpZWQiOm51bGwsInJlZ1RpbWUiOjE3NzMxMDY2NDkxOTksInBob25lIjoiIiwiZGVwb3NpdCI6ZmFsc2UsInVzZXJuYW1lIjoiR01fcXVhcG90anoifQ.3ycgvK1-PwRpBqANZJ3li00kpuzV6Ike6ZjYPthf3X0",
-                    "locale": "vi",
-                    "userId": "a28a0f06-e88f-44b7-a268-5f6dad949fbf",
-                    "username": "GM_quapotjz",
-                    "timestamp": 1774138177205,
-                    "refreshToken": "950f5b9974dd4f4c982a3681af9acbc7.f0d252e72ee64f07bd5819d6ca54bba1"
-                }
-            }
-        ],
-        [6, "MiniGame", "taixiuPlugin", {"cmd": 1005}],
-        [6, "MiniGame", "lobbyPlugin", {"cmd": 10001}]
-    ]
+# ĐƯỜNG DẪN ĐÍNH KÈM TOKEN MỚI CỦA NGƯỜI ANH EM
+WEBSOCKET_URL = "https://ws-lby.azhkthg1.net/wsbinary?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJnZW5kZXIiOjAsImNhblZpZXdTdGF0IjpmYWxzZSwiZGlzcGxheU5hbWUiOiJ2aXBnYW1lIiwiYm90IjowLCJpc01lcmNoYW50IjpmYWxzZSwidmVyaWZpZWRCYW5rQWNjb3VudCI6ZmFsc2UsInBsYXlFdmVudExvYmJ5IjpmYWxzZSwiY3VzdG9tZXJJZCI6MzQ4NzIwNTA0LCJhZmZJZCI6IjI3OTc1NmNmMjMwODQ1ODU5ZGJkNzljODZkYzkzNDVlIiwiYmFubmVkIjpmYWxzZSwiYnJhbmQiOiJzdW4ud2luIiwiZW1haWwiOiIiLCJ0aW1lc3RhbXAiOjE3ODI2NTY4OTY2MzgsImxvY2tHYW1lcyI6W10sImFtb3VudCI6MCwibG9ja0NoYXQiOmZhbHNlLCJwaG9uZVZlcmlmaWVkIjpmYWxzZSwiaXBBZGRyZXNzIjoiMjQwMjo4MDA6NjFkNzpkNTkyOjc4NzE6MTgyYTpmMGJkOmVmYmEiLCJtdXRlIjpmYWxzZSwiYXZhdGFyIjoiaHR0cHM6Ly9pbWFnZXMuc3dpbnNob3AubmV0L2ltYWdlcy9hdmF0YXIvYXZhdGFyXzA3LnBuZyIsInBsYXRmb3JtSWQiOjQsInVzZXJJZCI6Ijg5NTMwM2I0LTgwMzMtNDYzNC04OGUwLWU0ZWQyZmM2Yjg2YyIsImVtYWlsVmVyaWZpZWQiOm51bGwsInJlZ1RpbWUiOjE3Nzk3MTcwOTM3NTcsInBob25lIjoiIiwiZGVwb3NpdCI6dHJ1ZSwidXNlcm5hbWUiOiJTQ19ob2FuZzIyODAifQ.laROx8f6ZBgvr5xH5HVeG0-paEhzHFRzT0lW-k-XXQI"
+
+# THAY ĐỔI CẤU HÌNH HEADERS THEO ĐÚNG THIẾT BỊ IPHONE (MỤC APP TRÊN ẢNH)
+WS_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_11 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6.1 Mobile/15E148 Safari/604.1",
+    "Origin": "https://play.sun.pw"
+}
+
+# Cập nhật thông tin gói tin khởi tạo theo User mới: SC_hoangz2280
+initial_messages = [
+    [
+        1,
+        "MiniGame",
+        "SC_hoangz2280",
+        "quapit",
+        {
+            "signature": "05915B436159B8F4E4DFF537639BD014D54EBEFA18CF62A8EB205B4074010AD72AEA9A780D5A8A4E1BD59BBBAFE03902C594B5DA56FD60D099F1FDDCCD48385FCC2760B5B0B4B8E75D39B8E40DF8CB7C01EA58DBEDA32805927473AB71FA9B798B0C2EDC445C3E36E47EF0AAFAD45601D99AAD1EC642FD2B63573A0401D6EC69",
+            "expireIn": 1782656896638,
+            "wsToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJnZW5kZXIiOjAsImNhblZpZXdTdGF0IjpmYWxzZSwiZGlzcGxheU5hbWUiOiJ2aXBnYW1lIiwiYm90IjowLCJpc01lcmNoYW50IjpmYWxzZSwidmVyaWZpZWRCYW5rQWNjb3VudCI6ZmFsc2UsInBsYXlFdmVudExvYmJ5IjpmYWxzZSwiY3VzdG9tZXJJZCI6MzQ4NzIwNTA0LCJhZmZJZCI6IjI7OTc1NmNmMjMwODQ1ODU5ZGJkNzljODZkYzkzNDVlIiwiYmFubmVkIjpmYWxzZSwiYnJhbmQiOiJzdW4ud2luIiwiZW1haWwiOiIiLCJ0aW1lc3RhbXAiOjE3ODI2NTY4OTY2MzgsImxvY2tHYW1lcyI6W10sImFtb3VudCI6MCwibG9ja0NoYXQiOmZhbHNlLCJwaG9uZVZlcmlmaWVkIjpmYWxzZSwiaXBBZGRyZXNzIjoiMjQwMjo4MDA6NjFkNzpkNTkyOjc4NzE6MTgyYTpmMGJkOmVmYmEiLCJtdXRlIjpmYWxzZSwiYXZhdGFyIjoiaHR0cHM6Ly9pbWFnZXMuc3dpbnNob3AubmV0L2ltYWdlcy9hdmF0YXIvYXZhdGFyXzA3LnBuZyIsInBsYXRmb3JtSWQiOjQsInVzZXJJZCI6Ijg5NTMwM2I0LTgwMzMtNDYzNC04OGUwLWU0ZWQyZmM2Yjg2YyIsImVtYWlsVmVyaWZpZWQiOm51bGwsInJlZ1RpbWUiOjE3Nzk3MTcwOTM3NTcsInBob25lIjoiIiwiZGVwb3NpdCI6dHJ1ZSwidXNlcm5hbWUiOiJTQ19ob2FuZzIyODAifQ.laROx8f6ZBgvr5xH5HVeG0-paEhzHFRzT0lW-k-XXQI",
+            "accessToken": "7e9a9ecbff1b4a6393b48346f6d8b709",
+            "message": "Thành công",
+            "refreshToken": "",
+            "info": {}
+        }
+    ],
+    [6, "MiniGame", "taixiuPlugin", {"cmd": 1005}],
+    [6, "MiniGame", "lobbyPlugin", {"cmd": 10001}]
+]
 
 def get_network_info():
-    """Lấy thông tin mạng"""
     try:
         hostname = socket.gethostname()
         local_ip = socket.gethostbyname(hostname)
-        
         try:
             response = requests.get('https://api.ipify.org?format=json', timeout=5)
             public_ip = response.json()['ip']
         except:
             public_ip = None
-            
         return {'localIP': local_ip, 'publicIP': public_ip}
     except Exception as e:
         print(f"Lỗi lấy network info: {e}")
         return {'localIP': '127.0.0.1', 'publicIP': None}
 
 def handle_error(context, error):
-    """Xử lý lỗi"""
     error_msg = f"Lỗi - {context}: {str(error)}"
     print(f"[❌] {error_msg}")
     return error_msg
 
 def get_ws_connect_kwargs():
-    """Trả về kwargs phù hợp với phiên bản websockets đang dùng"""
     kwargs = {
         "ping_interval": 15,
         "ping_timeout": 10,
@@ -188,35 +150,37 @@ def get_ws_connect_kwargs():
         else:
             kwargs["extra_headers"] = WS_HEADERS
     except Exception:
-        # Mặc định dùng additional_headers (phiên bản mới)
         kwargs["additional_headers"] = WS_HEADERS
     return kwargs
 
 async def connect_websocket():
-    """Kết nối WebSocket"""
     global ws_connection, current_session_id, current_result
-    
     connect_kwargs = get_ws_connect_kwargs()
     
     while True:
         try:
-            print("[🔄] Đang kết nối WebSocket...")
+            print("[🔄] Đang kết nối WebSocket dạng Binary...")
+            # Thay đổi giao thức wss nếu link bắt đầu bằng https://
+            ws_url = WEBSOCKET_URL.replace("https://", "wss://")
             
             ws_connection = await websockets.connect(
-                WEBSOCKET_URL,
+                ws_url,
                 **connect_kwargs
             )
+            print("[✅] Kết nối thành công đến Sun.Win (iOS Safari Mode)")
             
-            print("[✅] WebSocket connected to Sun.Win")
-            
-            # Gửi initial messages
+            # Gửi gói tin bắt tay ban đầu
             for i, msg in enumerate(initial_messages):
                 await asyncio.sleep(i * 0.6)
                 await ws_connection.send(json.dumps(msg))
             
-            # Nhận messages
+            # Đọc luồng dữ liệu liên tục từ Server
             async for message in ws_connection:
                 try:
+                    # NẾU NHẬN BYTES (DỮ LIỆU NHỊ PHÂN), TIẾN HÀNH GIẢI MÃ SANG TEXT
+                    if isinstance(message, bytes):
+                        message = message.decode('utf-8')
+                        
                     data = json.loads(message)
                     
                     if not isinstance(data, list) or len(data) < 2:
@@ -252,96 +216,65 @@ async def connect_websocket():
                             }
                             
                             print(f"[🎲] Phiên {current_result['phien']}: {d1}-{d2}-{d3} = {total} ({result}) - {current_result['thoi_gian']}")
-                            
                             current_session_id = None
                             
-                except json.JSONDecodeError as e:
-                    handle_error("Parse JSON", e)
+                except json.JSONDecodeError:
+                    pass
                 except Exception as e:
                     handle_error("Xử lý message", e)
                     
         except websockets.exceptions.ConnectionClosed as e:
-            handle_error("WebSocket đóng", e)
+            handle_error("WebSocket đóng đột ngột", e)
             await asyncio.sleep(reconnect_delay)
         except Exception as e:
-            handle_error("Kết nối WebSocket", e)
+            handle_error("Lỗi kết nối", e)
             await asyncio.sleep(reconnect_delay)
 
-# Flask routes
 @app.route('/api/tx', methods=['GET'])
 def get_tx_result():
-    """Endpoint lấy kết quả tài xỉu mới nhất"""
     return jsonify(current_result)
 
 @app.route('/', methods=['GET'])
 def index():
-    """Trang chủ"""
     return jsonify({
-        "name": "Sun.Win Tài Xỉu Data Stream",
-        "version": "1.0",
+        "name": "Sun.Win Tài Xỉu Data Stream (Binary Model)",
+        "version": "1.2",
         "endpoints": {
             "/api/tx": "Lấy kết quả tài xỉu mới nhất"
         },
         "thoi_gian": get_vietnam_time(),
-        "current_user": TOKEN_DATA.get('username') if TOKEN_DATA else "Unknown"
+        "status": "Running (iOS Emulation)"
     })
 
-# Xử lý các route không tồn tại
-@app.errorhandler(404)
-def not_found(error):
-    return jsonify({"error": "Endpoint không tồn tại. Chỉ có /api/tx"}), 404
-
 def run_flask():
-    """Chạy Flask server"""
     try:
         app.run(host='0.0.0.0', port=PORT, debug=False, use_reloader=False)
     except Exception as e:
         handle_error("Flask server", e)
 
 async def main():
-    """Main function"""
     global start_time
     start_time = time.time()
-    
     network_info = get_network_info()
     
     print("\n" + "="*60)
-    print("🎲 Sun.Win Tài Xỉu Data Stream")
+    print("🎲 Sun.Win Tài Xỉu Data Stream - SAFARI BINARY PORT")
     print("="*60)
-    if TOKEN_DATA:
-        print(f"👤 Đang dùng token của: {TOKEN_DATA.get('username', 'Unknown')}")
-        print(f"🆔 User ID: {TOKEN_DATA.get('userId', 'Unknown')}")
-        print(f"🌐 IP: {TOKEN_DATA.get('ipAddress', 'Unknown')}")
-    print(f"📡 Server running on:")
-    print(f"   Local: http://localhost:{PORT}")
-    print(f"   Network: http://{network_info['localIP']}:{PORT}")
-    print(f"🔧 websockets version: {websockets.__version__}")
-    print("="*60)
-    print("🔌 Connecting to Sun.Win WebSocket...")
-    print("="*60 + "\n")
-    print("📊 API Endpoint:")
-    print(f"   🎯 /api/tx - Lấy kết quả tài xỉu mới nhất")
+    print(f"📡 API Live tại: http://localhost:{PORT}/api/tx")
     print("="*60 + "\n")
     
-    # Chạy Flask trong thread riêng
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
     
-    # Kết nối WebSocket
     await connect_websocket()
 
 def signal_handler(sig, frame):
-    """Xử lý tín hiệu dừng"""
-    print("\n[👋] Đang tắt server...")
     sys.exit(0)
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
-    
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n[👋] Server stopped by user")
-    except Exception as e:
-        handle_error("Main", e)
+        pass
