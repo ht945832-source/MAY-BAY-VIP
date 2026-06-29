@@ -8,7 +8,6 @@ const app = express();
 app.use(cors());
 const PORT = process.env.PORT || 1234;
 
-// Biến lưu kết quả toàn cục
 let currentResult = {
     "phien": null,
     "xuc_xac_1": null,
@@ -22,71 +21,60 @@ let currentResult = {
 let currentSessionId = null;
 let wsConnection = null;
 const RECONNECT_DELAY = 2500;
-const PING_INTERVAL = 15000;
 
-// Hàm lấy thời gian Việt Nam (UTC+7)
 function getVietnamTime() {
     const now = new Date();
     const utc7 = new Date(now.getTime() + (7 * 60 * 60 * 1000) + (now.getTimezoneOffset() * 60000));
     return utc7.toISOString().replace('T', ' ').substring(0, 19) + " UTC+7";
 }
 
-// Hàm tự động quét và bóc tách dữ liệu JSON sạch từ file token.txt chứa ký tự lạ
+// Hàm giải mã token.txt thông minh theo cấu trúc gói tin nhị phân của ông
 function loadTokenFromFile() {
     try {
         const filePath = path.join(__dirname, 'token.txt');
         if (!fs.existsSync(filePath)) {
-            console.log("[❌] Không tìm thấy file token.txt trong thư mục!");
+            console.log("[❌] Không tìm thấy file token.txt!");
             return null;
         }
 
         const content = fs.readFileSync(filePath, 'utf8');
-        if (!content.trim()) {
-            console.log("[❌] File token.txt đang trống rỗng!");
-            return null;
-        }
-
-        // Dùng Regex quét tìm đoạn JSON chứa ipAddress hoặc wsToken bất kể ký tự lạ bao quanh
-        const jsonMatch = content.match(/\{[^{}]*"wsToken"[^{}]*\}/);
+        
+        // Quét tìm trực tiếp khối JSON chứa ipAddress và wsToken
+        const jsonMatch = content.match(/\{[^{}]*"ipAddress"[^{}]*\}/);
         if (jsonMatch) {
             const parsedData = JSON.parse(jsonMatch[0]);
-            console.log("[✅] Đã đọc và đồng bộ cấu hình từ token.txt thành công.");
+            console.log(`[✅] Đã đồng bộ Token thành công của User: ${parsedData.username || 'Hệ thống'}`);
             return parsedData;
         }
-
         return null;
     } catch (error) {
-        console.log(`[❌] Lỗi khi xử lý đọc file token.txt: ${error.message}`);
+        console.log(`[❌] Lỗi xử lý đọc file token.txt: ${error.message}`);
         return null;
     }
 }
 
-// Tiến hành khởi tạo dữ liệu Token ban đầu
 const TOKEN_DATA = loadTokenFromFile();
 
 let WS_TOKEN = "";
-let ACTIVE_USER = "SC_hoangz2280";
-let EXPIRE_TIME = 1782656896638;
+let ACTIVE_USER = "GM_quapotjz";
+let EXPIRE_TIME = 1780029354479;
 let REFRESH_TOKEN = "";
 
 if (TOKEN_DATA) {
     WS_TOKEN = TOKEN_DATA.wsToken || "";
-    ACTIVE_USER = TOKEN_DATA.username || "SC_hoangz2280";
-    EXPIRE_TIME = TOKEN_DATA.timestamp || 1782656896638;
+    ACTIVE_USER = TOKEN_DATA.username || "GM_quapotjz";
+    EXPIRE_TIME = TOKEN_DATA.timestamp || 1780029354479;
     REFRESH_TOKEN = TOKEN_DATA.refreshToken || "";
-} else {
-    console.log("[⚠️] Áp dụng token dự phòng mặc định...");
-    WS_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJnZW5kZXIiOjAsImNhblZpZXdTdGF0IjpmYWxzZSwiZGlzcGxheU5hbWUiOiJ2aXBnYW1lIiwiYm90IjowLCJpc01lcmNoYW50IjpmYWxzZSwidmVyaWZpZWRCYW5rQWNjb3VudCI6ZmFsc2UsInBsYXlFdmVudExvYmJ5IjpmYWxzZSwiY3VzdG9tZXJJZCI6MzQ4NzIwNTA0LCJhZmZJZCI6IjI3OTc1NmNmMjMwODQ1ODU5ZGJkNzljODZkYzkzNDVlIiwiYmFubmVkIjpmYWxzZSwiYnJhbmQiOiJzdW4ud2luIiwiZW1haWwiOiIiLCJ0aW1lc3RhbXAiOjE3ODI2NTY4OTY2MzgsImxvY2tHYW1lcyI6W10sImFtb3VudCI6MCwibG9ja0NoYXQiOmZhbHNlLCJwaG9uZVZlcmlmaWVkIjpmYWxzZSwiaXBBZGRyZXNzIjoiMjQwMjo4MDA6NjFkNzpkNTkyOjc4NzE6MTgyYTpmMGJkOmVmYmEiLCJtdXRlIjpmYWxzZSwiYXZhdGFyIjoiaHR0cHM6Ly9pbWFnZXMuc3dpbnNob3AubmV0L2ltYWdlcy9hdmF0YXIvYXZhdGFyXzA3LnBuZyIsInBsYXRmb3JtSWQiOjQsInVzZXJJZCI6Ijg5NTMwM2I0LTgwMzMtNDYzNC04OGUwLWU0ZWQyZmM2Yjg2YyIsImVtYWlsVmVyaWZpZWQiOm51bGwsInJlZ1RpbWUiOjE3Nzk3MTcwOTM3NTcsInBob25lIjoiIiwiZGVwb3NpdCI6dHJ1ZSwidXNlcm5hbWUiOiJTQ1_hoGFuZzIyODAifQ.laROx8f6ZBgvr5xH5HVeG0-paEhzHFRzT0lW-k-XXQI";
 }
 
-// Cấu hình URL và Header đúng chuẩn thiết bị di động iOS/Safari theo app của ông
-const WEBSOCKET_URL = `wss://websocket.azhkthg1.net/wsbinary?token=${WS_TOKEN}`;
+// Endpoint động (Hỗ trợ cả /websocket hoặc /wsbinary tùy thuộc thiết bị của ông)
+const WEBSOCKET_URL = `wss://websocket.azhkthg1.net/websocket?token=${WS_TOKEN}`;
+
 const WS_HEADERS = {
     "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_11 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6.1 Mobile/15E148 Safari/604.1",
     "Origin": "https://play.sun.pw"
 };
 
-// Mảng tin nhắn bắt tay khởi tạo đồng bộ phiên
 const initialMessages = [
     [
         1,
@@ -108,17 +96,16 @@ const initialMessages = [
 ];
 
 function connectWebsocket() {
-    console.log("[🔄] Đang mở luồng kết nối WebSocket iOS Safari...");
+    console.log("[🔄] Đang mở kết nối WebSocket...");
 
     wsConnection = new WebSocket(WEBSOCKET_URL, {
         headers: WS_HEADERS,
-        handshakeTimeout: 10000
+        handshakeTimeout: 15000
     });
 
     wsConnection.on('open', () => {
-        console.log("[✅] Đã thiết lập kết nối stream đến cổng wsbinary máy chủ!");
+        console.log("[✅] WebSocket Connected!");
         
-        // Gửi loạt gói tin bắt tay tuần tự
         initialMessages.forEach((msg, index) => {
             setTimeout(() => {
                 if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
@@ -130,10 +117,7 @@ function connectWebsocket() {
 
     wsConnection.on('message', (message) => {
         try {
-            // Chuyển đổi định dạng nếu nhận dữ liệu buffer nhị phân
-            const msgString = message.toString('utf8');
-            const data = JSON.parse(msgString);
-
+            const data = JSON.parse(message.toString('utf8'));
             if (!Array.isArray(data) || data.length < 2) return;
 
             if (typeof data[1] === 'object' && data[1] !== null) {
@@ -141,7 +125,7 @@ function connectWebsocket() {
 
                 if (cmd === 1008 && sid) {
                     currentSessionId = sid;
-                    console.log(`[🎮] Nhận diện mã phiên mới: ${sid}`);
+                    console.log(`[🎮] Mã phiên mới: ${sid}`);
                 }
 
                 if (cmd === 1003 && gBB) {
@@ -160,54 +144,37 @@ function connectWebsocket() {
                         "thoi_gian": getVietnamTime()
                     };
 
-                    console.log(`[🎲] Kết quả phiên ${currentResult.phien}: ${d1}-${d2}-${d3} = ${total} (${result})`);
+                    console.log(`[🎲] Kết quả phiên ${currentResult.phien}: ${total} (${result})`);
                     currentSessionId = null;
                 }
             }
-        } catch (e) {
-            // Bỏ qua lỗi parse nếu dữ liệu luồng không phải định dạng JSON mong muốn
-        }
+        } catch (e) {}
     });
 
-    wsConnection.on('close', (code, reason) => {
-        console.log(`[❌] Kết nối bị đóng từ máy chủ (Code: ${code}). Đang thử kết nối lại sau ${RECONNECT_DELAY/1000}s...`);
+    wsConnection.on('close', (code) => {
+        console.log(`[❌] Socket đóng (Code: ${code}). Đang kết nối lại...`);
         setTimeout(connectWebsocket, RECONNECT_DELAY);
     });
 
-    wsConnection.on('error', (error) => {
-        console.log(`[❌] Gặp lỗi luồng kết nối WebSocket: ${error.message}`);
+    wsConnection.on('error', (err) => {
+        console.log(`[❌] Lỗi kết nối socket: ${err.message}`);
     });
 }
 
-// --- Thiết lập API routes của Express Backend ---
 app.get('/api/tx', (req, res) => {
     res.json(currentResult);
 });
 
 app.get('/', (req, res) => {
     res.json({
-        "name": "Sun.Win Binary Streamer (Node.js Model)",
-        "status": "Active",
-        "synchronized_user": ACTIVE_USER,
-        "thoi_gian": getVietnamTime()
+        "name": "SunWin Streamer Node V2",
+        "status": "Running",
+        "user": ACTIVE_USER,
+        "time": getVietnamTime()
     });
 });
 
-app.use((req, res) => {
-    res.status(404).json({ "error": "Endpoint không tồn tại. Dùng cổng /api/tx" });
-});
-
-// Chạy khởi động server ứng dụng
 app.listen(PORT, '0.0.0.0', () => {
-    console.log("\n" + "="*60);
-    console.log(`📡 API ENDPOINT TRUY XUẤT: http://localhost:${PORT}/api/tx`);
-    console.log(`👤 Tài khoản đồng bộ: ${ACTIVE_USER}`);
-    console.log("="*60 + "\n");
-    
-    // Bắt đầu mở tiến trình lắng nghe socket
+    console.log(`📡 Cổng API đang mở tại /api/tx thông qua Port: ${PORT}`);
     connectWebsocket();
 });
-
-// Dọn dẹp tiến trình khi tắt script
-process.on('SIGINT', () => { process.exit(0); });
-process.on('SIGTERM', () => { process.exit(0); });
